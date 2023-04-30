@@ -22,7 +22,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-type ResourceType struct {
+type ResourceTypeReference struct {
 	Name     string
 	Required bool
 }
@@ -31,7 +31,7 @@ type Action struct {
 	Name             string
 	Description      string
 	AccessLevel      string
-	ResourceTypes    []*ResourceType
+	ResourceTypes    []*ResourceTypeReference
 	ConditionKeys    []string
 	DependentActions []string
 }
@@ -430,7 +430,7 @@ func actionsFromTable(table [][]string) []*Action {
 	actions := make([]*Action, len(table))
 	for rowI, row := range table {
 		resourceTypeStrings := cleanupHTMLStringList(strings.Split(row[3], "\n"))
-		resourceTypes := make([]*ResourceType, 0)
+		resourceTypes := make([]*ResourceTypeReference, 0)
 		for _, it := range resourceTypeStrings {
 			parts := strings.Split(it, "*")
 			name := parts[0]
@@ -438,7 +438,7 @@ func actionsFromTable(table [][]string) []*Action {
 			if len(parts) > 1 {
 				required = true
 			}
-			resourceTypes = append(resourceTypes, &ResourceType{
+			resourceTypes = append(resourceTypes, &ResourceTypeReference{
 				Name:     name,
 				Required: required,
 			})
