@@ -70,14 +70,17 @@ type ServiceCells struct {
 	ConditionKeysCells [][]Cell
 }
 
+const VERSION_TAG = "v0.1.0"
+const RAW_DATA_PATH = "rawData.json"
+const VERSION_PATH = "version.txt"
+
 func main() {
-	// FIXME re-crawl if the application version changed
-	err := maybeCrawl(getRawDataPath())
+	err := maybeCrawl(getProjectDir())
 	if err != nil {
 		panic(err)
 	}
 
-	services, err := loadRawData(getRawDataPath())
+	services, err := loadRawData(getProjectDir())
 	if err != nil {
 		panic(err)
 	}
@@ -328,7 +331,8 @@ func stringWithBestMatch(filter string, allStrings []string) fuzzy.Ranks {
 	return matches
 }
 
-func loadRawData(path string) ([]*Service, error) {
+func loadRawData(projectDir string) ([]*Service, error) {
+	path := filepath.Join(projectDir, RAW_DATA_PATH)
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -346,15 +350,41 @@ func loadRawData(path string) ([]*Service, error) {
 }
 
 // TODO add cmdline flag to recrawl
-func maybeCrawl(path string) error {
-	_, err := os.Open(path)
+func maybeCrawl(projectDir string) error {
+	shouldCrawl := false
+
+	// If the raw data file does not exist, we should crawl
+	rawDataPath := filepath.Join(projectDir, RAW_DATA_PATH)
+	f, err := os.Open(rawDataPath)
 	if os.IsNotExist(err) {
+		shouldCrawl = true
+	} else if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// If the version file does not exist or has the wrong version in it, we should crawl
+	versionPath := filepath.Join(projectDir, VERSION_PATH)
+	version, err := os.ReadFile(versionPath)
+	if os.IsNotExist(err) {
+		shouldCrawl = true
+	} else if err != nil {
+		return err
+	}
+	shouldCrawl = shouldCrawl || strings.Trim(string(version), " \n") != VERSION_TAG
+
+	if shouldCrawl {
 		data, err := crawl()
 		if err != nil {
 			return err
 		}
 
-		err = saveCrawl(data, path)
+		err = saveCrawl(data, rawDataPath)
+		if err != nil {
+			return err
+		}
+
+		err = saveVersion(VERSION_TAG, projectDir)
 		if err != nil {
 			return err
 		}
@@ -380,6 +410,22 @@ func saveCrawl(rawData []*Service, path string) error {
 	defer rawDataFile.Close()
 
 	_, err = rawDataFile.Write(jsonData)
+	return err
+}
+
+func saveVersion(versionTag string, projectDir string) error {
+	path := filepath.Join(projectDir, VERSION_PATH)
+	err := os.MkdirAll(filepath.Dir(path), 0777)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write([]byte(versionTag))
 	return err
 }
 
@@ -713,12 +759,10 @@ func removeSpace(s string) string {
 	return string(rr)
 }
 
-func getRawDataPath() string {
+func getProjectDir() string {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
 	}
-
-	projectDir := path.Join(homedir, ".iampolicyhelper")
-	return path.Join(projectDir, "rawData.json")
+	return path.Join(homedir, ".iampolicyhelper")
 }
