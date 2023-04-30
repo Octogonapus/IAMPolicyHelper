@@ -207,7 +207,9 @@ func renderBody(action *Action, service *Service) string {
 		}
 	}
 
-	// Add colors
+	// Add colors. Colors for text in a table must be done after the table, because the table generator doesn't account
+	// for the color codes not getting rendered, so the column widths will be wrong.
+
 	// service prefix (and service name)
 	re := regexp.MustCompile(fmt.Sprintf("(%s):", service.Name))
 	message = re.ReplaceAllString(message, "[#00ff80]$1[white]:")
@@ -218,6 +220,7 @@ func renderBody(action *Action, service *Service) string {
 	re = regexp.MustCompile("aws:")
 	message = re.ReplaceAllString(message, "[#ffdf00]aws[white]:")
 
+	// condition keys
 	for _, it := range relevantConditionKeyNames {
 		parts := strings.Split(it, ":") // we don't want to highlight the prefix, only the condition key name itself
 		re = regexp.MustCompile(fmt.Sprintf("(%s)([ ,\n])", regexp.QuoteMeta(parts[1])))
