@@ -9,20 +9,20 @@ import (
 func TestHTMLTableTo2D_A(t *testing.T) {
 	rows := [][]Cell{
 		{
-			{rowspan: 1, colspan: 1, text: "A"},
-			{rowspan: 1, colspan: 1, text: "B"},
+			{Rowspan: 1, Colspan: 1, Text: "A"},
+			{Rowspan: 1, Colspan: 1, Text: "B"},
 		},
 		{
-			{rowspan: 2, colspan: 1, text: "C"},
-			{rowspan: 1, colspan: 1, text: "D"},
+			{Rowspan: 2, Colspan: 1, Text: "C"},
+			{Rowspan: 1, Colspan: 1, Text: "D"},
 		},
 		{
-			{rowspan: 1, colspan: 1, text: "E"},
-			{rowspan: 1, colspan: 1, text: "F"},
+			{Rowspan: 1, Colspan: 1, Text: "E"},
+			{Rowspan: 1, Colspan: 1, Text: "F"},
 		},
 		{
-			{rowspan: 1, colspan: 1, text: "G"},
-			{rowspan: 1, colspan: 1, text: "H"},
+			{Rowspan: 1, Colspan: 1, Text: "G"},
+			{Rowspan: 1, Colspan: 1, Text: "H"},
 		},
 	}
 
@@ -41,20 +41,20 @@ func TestHTMLTableTo2D_A(t *testing.T) {
 func TestHTMLTableTo2D_B(t *testing.T) {
 	rows := [][]Cell{
 		{
-			{rowspan: 1, colspan: 1, text: "A"},
-			{rowspan: 1, colspan: 1, text: "B"},
+			{Rowspan: 1, Colspan: 1, Text: "A"},
+			{Rowspan: 1, Colspan: 1, Text: "B"},
 		},
 		{
-			{rowspan: 2, colspan: 1, text: "C"},
-			{rowspan: 2, colspan: 1, text: "D"},
+			{Rowspan: 2, Colspan: 1, Text: "C"},
+			{Rowspan: 2, Colspan: 1, Text: "D"},
 		},
 		{
-			{rowspan: 1, colspan: 1, text: "E"},
-			{rowspan: 1, colspan: 1, text: "F"},
+			{Rowspan: 1, Colspan: 1, Text: "E"},
+			{Rowspan: 1, Colspan: 1, Text: "F"},
 		},
 		{
-			{rowspan: 1, colspan: 1, text: "G"},
-			{rowspan: 1, colspan: 1, text: "H"},
+			{Rowspan: 1, Colspan: 1, Text: "G"},
+			{Rowspan: 1, Colspan: 1, Text: "H"},
 		},
 	}
 
@@ -73,13 +73,13 @@ func TestHTMLTableTo2D_B(t *testing.T) {
 func TestHTMLTableTo2D_C(t *testing.T) {
 	rows := [][]Cell{
 		{
-			{rowspan: 3, colspan: 1, text: "A"},
-			{rowspan: 0, colspan: 1, text: "B"},
-			{rowspan: 1, colspan: 1, text: "C"},
-			{rowspan: 1, colspan: 2, text: "D"},
+			{Rowspan: 3, Colspan: 1, Text: "A"},
+			{Rowspan: 0, Colspan: 1, Text: "B"},
+			{Rowspan: 1, Colspan: 1, Text: "C"},
+			{Rowspan: 1, Colspan: 2, Text: "D"},
 		},
 		{
-			{rowspan: 1, colspan: 0, text: "E"},
+			{Rowspan: 1, Colspan: 0, Text: "E"},
 		},
 	}
 

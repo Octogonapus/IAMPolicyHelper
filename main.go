@@ -58,17 +58,17 @@ type Service struct {
 }
 
 type Cell struct {
-	rowspan int
-	colspan int
-	text    string
+	Rowspan int
+	Colspan int
+	Text    string
 }
 
 type ServiceCells struct {
-	name               string
-	prefix             string
-	actionsCells       [][]Cell
-	resourcesCells     [][]Cell
-	conditionKeysCells [][]Cell
+	Name               string
+	Prefix             string
+	ActionsCells       [][]Cell
+	ResourcesCells     [][]Cell
+	ConditionKeysCells [][]Cell
 }
 
 // TODO color coding. Unique color for service prefix, actions, resource types, condition keys
@@ -398,8 +398,8 @@ func crawl() ([]*Service, error) {
 		if strings.Contains(h.Text, "service prefix") {
 			url := h.Request.AbsoluteURL(h.Request.URL.String())
 			serviceCells := getServiceCells(url)
-			serviceCells.name = strings.Trim(strings.Split(h.Text, "(")[0], " ")
-			serviceCells.prefix = h.ChildText("code")
+			serviceCells.Name = strings.Trim(strings.Split(h.Text, "(")[0], " ")
+			serviceCells.Prefix = h.ChildText("code")
 		}
 	})
 
@@ -410,17 +410,17 @@ func crawl() ([]*Service, error) {
 		if strings.HasPrefix(headerText, "actions") {
 			e.ForEach("table tbody tr", func(i int, h *colly.HTMLElement) {
 				rows := crawlTableRows(h)
-				serviceCells.actionsCells = append(serviceCells.actionsCells, rows)
+				serviceCells.ActionsCells = append(serviceCells.ActionsCells, rows)
 			})
 		} else if strings.HasPrefix(headerText, "resource types") {
 			e.ForEach("table tbody tr", func(i int, h *colly.HTMLElement) {
 				rows := crawlTableRows(h)
-				serviceCells.resourcesCells = append(serviceCells.resourcesCells, rows)
+				serviceCells.ResourcesCells = append(serviceCells.ResourcesCells, rows)
 			})
 		} else if strings.HasPrefix(headerText, "condition keys") {
 			e.ForEach("table tbody tr", func(i int, h *colly.HTMLElement) {
 				rows := crawlTableRows(h)
-				serviceCells.conditionKeysCells = append(serviceCells.conditionKeysCells, rows)
+				serviceCells.ConditionKeysCells = append(serviceCells.ConditionKeysCells, rows)
 			})
 		}
 	})
@@ -438,9 +438,9 @@ func crawl() ([]*Service, error) {
 			continue
 		}
 
-		actionTable := htmlTableTo2D(serviceCells.actionsCells)
-		resourcesTable := htmlTableTo2D(serviceCells.resourcesCells)
-		conditionKeysTable := htmlTableTo2D(serviceCells.conditionKeysCells)
+		actionTable := htmlTableTo2D(serviceCells.ActionsCells)
+		resourcesTable := htmlTableTo2D(serviceCells.ResourcesCells)
+		conditionKeysTable := htmlTableTo2D(serviceCells.ConditionKeysCells)
 
 		actions := actionsFromTable(actionTable)
 		resources := resourcesFromTable(resourcesTable)
@@ -448,8 +448,8 @@ func crawl() ([]*Service, error) {
 
 		service := &Service{
 			URL:           url,
-			Name:          serviceCells.name,
-			Prefix:        serviceCells.prefix,
+			Name:          serviceCells.Name,
+			Prefix:        serviceCells.Prefix,
 			Actions:       actions,
 			ResourceTypes: resources,
 			ConditionKeys: conditionKeys,
@@ -488,7 +488,7 @@ func crawlTableRows(h *colly.HTMLElement) []Cell {
 			}
 		}
 
-		rows = append(rows, Cell{rowspan: rowspan, colspan: colspan, text: s.Text()})
+		rows = append(rows, Cell{Rowspan: rowspan, Colspan: colspan, Text: s.Text()})
 	})
 
 	return rows
@@ -585,7 +585,7 @@ func htmlTableTo2D(rows [][]Cell) [][]string {
 				// skip the last element
 				break
 			}
-			colspans[i] = cell.colspan
+			colspans[i] = cell.Colspan
 		}
 
 		colspanSum := 0
@@ -600,10 +600,10 @@ func htmlTableTo2D(rows [][]Cell) [][]string {
 		// update rowspan bookkeeping; 0 is a span to the bottom.
 		theseRowspans := make([]int, len(row))
 		for i, cell := range row {
-			if cell.rowspan == 0 {
+			if cell.Rowspan == 0 {
 				theseRowspans[i] = rowcount - rowI
 			} else {
-				theseRowspans[i] = cell.rowspan
+				theseRowspans[i] = cell.Rowspan
 			}
 		}
 		rowspans = append(rowspans, theseRowspans...)
@@ -645,13 +645,13 @@ func htmlTableTo2D(rows [][]Cell) [][]string {
 			}
 
 			// fill table data
-			rowspan := cell.rowspan
+			rowspan := cell.Rowspan
 			if rowspan == 0 {
 				rowspan = rowcount - rowI
 			}
 			rowspansMap[colI] = rowspan
 
-			colspan := cell.colspan
+			colspan := cell.Colspan
 			if colspan == 0 {
 				colspan = colcount - colI
 			}
@@ -664,7 +664,7 @@ func htmlTableTo2D(rows [][]Cell) [][]string {
 					testrow := rowI + drow
 					testcol := colI + dcol
 					if testrow >= 0 && testrow < rowcount && testcol >= 0 && testcol < colcount {
-						table[testrow][testcol] = cell.text
+						table[testrow][testcol] = cell.Text
 						rowspansMap[testcol] = rowspan
 					}
 				}
