@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,8 +69,6 @@ type ServiceCells struct {
 	ResourcesCells     [][]Cell
 	ConditionKeysCells [][]Cell
 }
-
-// TODO color coding. Unique color for service prefix, actions, resource types, condition keys
 
 func main() {
 	// FIXME re-crawl if the application version changed
@@ -207,6 +206,24 @@ func renderBody(action *Action, service *Service) string {
 			message += fmt.Sprintf("\n\n[::b]Relevant Condition Keys[::-]\n%s", tableString)
 		}
 	}
+
+	// Add colors
+	// service prefix (and service name)
+	re := regexp.MustCompile(fmt.Sprintf("(%s):", service.Name))
+	message = re.ReplaceAllString(message, "[#00ff80]$1[white]:")
+	re = regexp.MustCompile(fmt.Sprintf("(%s):", service.Prefix))
+	message = re.ReplaceAllString(message, "[#00ff80]$1[white]:")
+
+	// aws prefix
+	re = regexp.MustCompile("aws:")
+	message = re.ReplaceAllString(message, "[#ffdf00]aws[white]:")
+
+	for _, it := range relevantConditionKeyNames {
+		parts := strings.Split(it, ":") // we don't want to highlight the prefix, only the condition key name itself
+		re = regexp.MustCompile(fmt.Sprintf("(%s)([ ,\n])", regexp.QuoteMeta(parts[1])))
+		message = re.ReplaceAllString(message, "[#4000ff]$1[white]$2")
+	}
+
 	return message
 }
 
@@ -691,14 +708,6 @@ func removeSpace(s string) string {
 		}
 	}
 	return string(rr)
-}
-
-func removeSpaces(ss []string) []string {
-	out := make([]string, len(ss))
-	for i, s := range ss {
-		out[i] = removeSpace(s)
-	}
-	return out
 }
 
 func getRawDataPath() string {
