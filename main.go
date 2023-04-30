@@ -28,12 +28,12 @@ type ResourceTypeReference struct {
 }
 
 type Action struct {
-	Name             string
-	Description      string
-	AccessLevel      string
-	ResourceTypes    []*ResourceTypeReference
-	ConditionKeys    []string
-	DependentActions []string
+	Name                   string
+	Description            string
+	AccessLevel            string
+	ResourceTypeReferences []*ResourceTypeReference
+	ConditionKeys          []string
+	DependentActions       []string
 }
 
 type Resource struct {
@@ -86,7 +86,7 @@ func main() {
 
 	app := tview.NewApplication()
 
-	makeNewMatch := false
+	makeNewMatch := true
 	inputField := tview.NewInputField().
 		SetFieldWidth(100).
 		SetDoneFunc(func(key tcell.Key) {
@@ -113,13 +113,13 @@ func main() {
 					service, action := lookupByFullActionName(matches[0].Target, services)
 					if service != nil {
 						resouceTypesString := ""
-						for i, it := range action.ResourceTypes {
+						for i, it := range action.ResourceTypeReferences {
 							if it.Required {
 								resouceTypesString += fmt.Sprintf("%s (required)", it.Name)
 							} else {
 								resouceTypesString += it.Name
 							}
-							if i < len(action.ResourceTypes)-1 {
+							if i < len(action.ResourceTypeReferences)-1 {
 								resouceTypesString += ", "
 							}
 						}
@@ -139,11 +139,11 @@ Condition Keys: %s`,
 							action.ConditionKeys,
 						)
 
-						if len(action.ResourceTypes) > 0 {
+						if len(action.ResourceTypeReferences) > 0 {
 							tableString := &strings.Builder{}
 							table := tablewriter.NewWriter(tableString)
 							table.SetHeader([]string{"Name", "ARN", "Condition Keys"})
-							for _, actionResourceTypeName := range action.ResourceTypes {
+							for _, actionResourceTypeName := range action.ResourceTypeReferences {
 								for _, resourceType := range service.Resources {
 									if actionResourceTypeName.Name == resourceType.Name {
 										table.Append([]string{
@@ -444,12 +444,12 @@ func actionsFromTable(table [][]string) []*Action {
 			})
 		}
 		action := &Action{
-			Name:             strings.Trim(row[0], " \n\t"),
-			Description:      strings.Trim(row[1], " \n\t"),
-			AccessLevel:      strings.Trim(row[2], " \n\t"),
-			ResourceTypes:    resourceTypes,
-			ConditionKeys:    cleanupHTMLStringList(strings.Split(row[4], "\n")),
-			DependentActions: cleanupHTMLStringList(strings.Split(row[5], "\n")),
+			Name:                   strings.Trim(row[0], " \n\t"),
+			Description:            strings.Trim(row[1], " \n\t"),
+			AccessLevel:            strings.Trim(row[2], " \n\t"),
+			ResourceTypeReferences: resourceTypes,
+			ConditionKeys:          cleanupHTMLStringList(strings.Split(row[4], "\n")),
+			DependentActions:       cleanupHTMLStringList(strings.Split(row[5], "\n")),
 		}
 		actions[rowI] = action
 	}
