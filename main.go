@@ -14,12 +14,12 @@ import (
 	"time"
 	"unicode"
 
+	"code.rocketnine.space/tslocum/cview"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gdamore/tcell/v2"
 	"github.com/gocolly/colly"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/olekukonko/tablewriter"
-	"github.com/rivo/tview"
 )
 
 type ResourceTypeReference struct {
@@ -75,7 +75,6 @@ type ServiceCells struct {
 // TODO bold titles
 // TODO lines between rows in tables
 // TODO scrolling in the text view
-// TODO input line should be as thin as possible, text view should take up the rest of the vertical space
 
 func main() {
 	// FIXME re-crawl if the application version changed
@@ -91,25 +90,25 @@ func main() {
 
 	actionNames := buildActionNames(services)
 
-	app := tview.NewApplication()
+	app := cview.NewApplication()
 
 	makeNewMatch := true
-	inputField := tview.NewInputField().
-		SetFieldWidth(0).
-		SetDoneFunc(func(key tcell.Key) {
-			app.Stop()
-		})
+	inputField := cview.NewInputField()
+	inputField.SetFieldWidth(0)
+	inputField.SetDoneFunc(func(key tcell.Key) {
+		app.Stop()
+	})
 	inputField.SetChangedFunc(func(text string) {
 		makeNewMatch = true
 	})
 
-	textView := tview.NewTextView().
-		SetDynamicColors(true).
-		SetRegions(true).
-		SetMaxLines(0).
-		SetChangedFunc(func() {
-			app.Draw()
-		})
+	textView := cview.NewTextView()
+	textView.SetDynamicColors(true)
+	textView.SetRegions(true)
+	textView.SetMaxLines(0)
+	textView.SetChangedFunc(func() {
+		app.Draw()
+	})
 
 	go func() {
 		for {
@@ -188,6 +187,7 @@ Condition Keys: %s`,
 						}
 
 						textView.SetText(message)
+						textView.ScrollToBeginning()
 					} else {
 						textView.SetText("No match")
 					}
@@ -199,14 +199,20 @@ Condition Keys: %s`,
 		}
 	}()
 
-	grid := tview.NewGrid().
-		SetRows(2).
-		SetColumns(1).
-		SetBorders(true).
-		AddItem(inputField, 1, 1, 1, 1, 0, 0, true).
-		AddItem(textView, 2, 1, 4, 1, 0, 0, false)
+	// grid := cview.NewGrid()
+	// grid.SetRows(2)
+	// grid.SetColumns(1)
+	// grid.SetBorders(true)
+	// grid.AddItem(inputField, 1, 1, 1, 1, 0, 0, true)
+	// grid.AddItem(textView, 2, 1, 4, 1, 0, 0, false)
 
-	if err := app.SetRoot(grid, true).Run(); err != nil {
+	flex := cview.NewFlex()
+	flex.SetDirection(cview.FlexRow)
+	flex.AddItem(inputField, 1, 0, true)
+	flex.AddItem(textView, 0, 1, false)
+
+	app.SetRoot(flex, true)
+	if err := app.Run(); err != nil {
 		panic(err)
 	}
 }

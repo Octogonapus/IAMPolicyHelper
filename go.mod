@@ -3,16 +3,17 @@ module github.com/Octogonapus/IAMPolicyHelper
 go 1.20
 
 require (
+	code.rocketnine.space/tslocum/cview v1.5.8
 	github.com/PuerkitoBio/goquery v1.8.1
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/gocolly/colly v1.2.0
 	github.com/lithammer/fuzzysearch v1.1.6
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/rivo/tview v0.0.0-20230406072732-e22ce9588bb4
 	github.com/stretchr/testify v1.8.2
 )
 
 require (
+	code.rocketnine.space/tslocum/cbind v0.1.5 // indirect
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/antchfx/htmlquery v1.3.0 // indirect
 	github.com/antchfx/xmlquery v1.3.15 // indirect
