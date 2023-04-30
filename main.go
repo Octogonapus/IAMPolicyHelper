@@ -15,15 +15,23 @@ import (
 	"unicode"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/gdamore/tcell/v2"
 	"github.com/gocolly/colly"
+	"github.com/lithammer/fuzzysearch/fuzzy"
+	"github.com/olekukonko/tablewriter"
 	"github.com/rivo/tview"
 )
+
+type ResourceType struct {
+	Name     string
+	Required bool
+}
 
 type Action struct {
 	Name             string
 	Description      string
 	AccessLevel      string
-	ResourceTypes    []string
+	ResourceTypes    []*ResourceType
 	ConditionKeys    []string
 	DependentActions []string
 }
@@ -64,39 +72,133 @@ type ServiceCells struct {
 }
 
 func main() {
-	// app := tview.NewApplication()
-
-	// inputField := tview.NewInputField().
-	// 	SetFieldWidth(100).
-	// 	SetDoneFunc(func(key tcell.Key) {
-	// 		app.Stop()
-	// 	})
-
-	// textView := tview.NewTextView().
-	// 	SetDynamicColors(true).
-	// 	SetRegions(true).
-	// 	SetChangedFunc(func() {
-	// 		app.Draw()
-	// 	})
-	// go mainTextRenderLoop(textView)
-
-	// flex := tview.NewFlex().
-	// 	AddItem(inputField, 0, 1, true).
-	// 	AddItem(textView, 0, 1, false).
-	// 	SetDirection(tview.FlexRow)
-
-	// if err := app.SetRoot(flex, true).Run(); err != nil {
-	// 	panic(err)
-	// }
+	err := maybeCrawl(getRawDataPath())
+	if err != nil {
+		panic(err)
+	}
 
 	services, err := loadRawData(getRawDataPath())
 	if err != nil {
 		panic(err)
 	}
-	for _, x := range services {
-		fmt.Printf("%+v\n", *x)
-	}
 
+	actionNames := buildActionNames(services)
+
+	app := tview.NewApplication()
+
+	makeNewMatch := false
+	inputField := tview.NewInputField().
+		SetFieldWidth(100).
+		SetDoneFunc(func(key tcell.Key) {
+			app.Stop()
+		})
+	inputField.SetChangedFunc(func(text string) {
+		makeNewMatch = true
+	})
+
+	textView := tview.NewTextView().
+		SetDynamicColors(true).
+		SetRegions(true).
+		SetMaxLines(0).
+		SetChangedFunc(func() {
+			app.Draw()
+		})
+
+	go func() {
+		for {
+			if makeNewMatch {
+				makeNewMatch = false
+				matches := stringWithBestMatch(inputField.GetText(), actionNames)
+				if len(matches) > 0 {
+					service, action := lookupByFullActionName(matches[0].Target, services)
+					if service != nil {
+						resouceTypesString := ""
+						for i, it := range action.ResourceTypes {
+							if it.Required {
+								resouceTypesString += fmt.Sprintf("%s (required)", it.Name)
+							} else {
+								resouceTypesString += it.Name
+							}
+							if i < len(action.ResourceTypes)-1 {
+								resouceTypesString += ", "
+							}
+						}
+
+						message := fmt.Sprintf(
+							`Service: %s
+Action: %s
+Description: %s
+Access Level: %s
+Resource Types: %s
+Condition Keys: %s`,
+							service.Name,
+							fmt.Sprintf("%s:%s", service.Prefix, action.Name),
+							action.Description,
+							action.AccessLevel,
+							resouceTypesString,
+							action.ConditionKeys,
+						)
+
+						if len(action.ResourceTypes) > 0 {
+							tableString := &strings.Builder{}
+							table := tablewriter.NewWriter(tableString)
+							table.SetHeader([]string{"Name", "ARN", "Condition Keys"})
+							for _, actionResourceTypeName := range action.ResourceTypes {
+								for _, resourceType := range service.Resources {
+									if actionResourceTypeName.Name == resourceType.Name {
+										table.Append([]string{
+											resourceType.Name,
+											resourceType.ARN,
+											fmt.Sprintf("%s", resourceType.ConditionKeys),
+										})
+									}
+								}
+							}
+							table.Render()
+							message += fmt.Sprintf("\n\nRelevant Resource Types\n%s\n", tableString)
+						}
+
+						textView.SetText(message)
+					} else {
+						textView.SetText("No match")
+					}
+				} else {
+					textView.SetText("No match")
+				}
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	grid := tview.NewGrid().
+		SetRows(2).
+		SetColumns(1).
+		SetBorders(true).
+		AddItem(inputField, 1, 1, 1, 1, 0, 0, true).
+		AddItem(textView, 2, 1, 4, 1, 0, 0, false)
+
+	if err := app.SetRoot(grid, true).Run(); err != nil {
+		panic(err)
+	}
+}
+
+func lookupByFullActionName(fullActionName string, services []*Service) (*Service, *Action) {
+	parts := strings.Split(fullActionName, ":")
+	prefix := parts[0]
+	actionName := parts[1]
+	for _, service := range services {
+		if service.Prefix == prefix {
+			for _, action := range service.Actions {
+				if strings.ToLower(action.Name) == actionName {
+					return service, action
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+func buildActionNames(services []*Service) []string {
 	fullActionNames := make([]string, 0)
 	for _, service := range services {
 		for _, action := range service.Actions {
@@ -105,15 +207,25 @@ func main() {
 			fullActionNames = append(fullActionNames, fullActionName)
 		}
 	}
-	fmt.Println(fullActionNames)
+	return fullActionNames
 }
 
-func mainTextRenderLoop(textView *tview.TextView) {
-	for {
-		textView.Clear()
-		textView.SetText("Done!")
-		time.Sleep(10 * time.Millisecond)
+func stringWithBestMatch(filter string, allStrings []string) fuzzy.Ranks {
+	matches := fuzzy.RankFind(filter, allStrings)
+
+	matchesWithPrefix := fuzzy.Ranks{}
+	for i := len(matches) - 1; i >= 0; i-- {
+		if strings.HasPrefix(matches[i].Target, filter) {
+			matchesWithPrefix = append(matchesWithPrefix, matches[i])
+		}
 	}
+	if len(matchesWithPrefix) > 0 {
+		sort.Sort(matchesWithPrefix)
+		return matchesWithPrefix
+	}
+
+	sort.Sort(matches)
+	return matches
 }
 
 func loadRawData(path string) ([]*Service, error) {
@@ -317,11 +429,25 @@ func cleanupHTMLStringList(ss []string) []string {
 func actionsFromTable(table [][]string) []*Action {
 	actions := make([]*Action, len(table))
 	for rowI, row := range table {
+		resourceTypeStrings := cleanupHTMLStringList(strings.Split(row[3], "\n"))
+		resourceTypes := make([]*ResourceType, 0)
+		for _, it := range resourceTypeStrings {
+			parts := strings.Split(it, "*")
+			name := parts[0]
+			required := false
+			if len(parts) > 1 {
+				required = true
+			}
+			resourceTypes = append(resourceTypes, &ResourceType{
+				Name:     name,
+				Required: required,
+			})
+		}
 		action := &Action{
 			Name:             strings.Trim(row[0], " \n\t"),
 			Description:      strings.Trim(row[1], " \n\t"),
 			AccessLevel:      strings.Trim(row[2], " \n\t"),
-			ResourceTypes:    cleanupHTMLStringList(strings.Split(row[3], "\n")),
+			ResourceTypes:    resourceTypes,
 			ConditionKeys:    cleanupHTMLStringList(strings.Split(row[4], "\n")),
 			DependentActions: cleanupHTMLStringList(strings.Split(row[5], "\n")),
 		}
