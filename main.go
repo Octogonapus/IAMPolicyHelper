@@ -11,12 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unicode"
 
 	"code.rocketnine.space/tslocum/cview"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/gdamore/tcell/v2"
 	"github.com/gocolly/colly"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/olekukonko/tablewriter"
@@ -92,16 +90,6 @@ func main() {
 	app := cview.NewApplication()
 	app.EnableMouse(true)
 
-	makeNewMatch := true
-	inputField := cview.NewInputField()
-	inputField.SetFieldWidth(0)
-	inputField.SetDoneFunc(func(key tcell.Key) {
-		app.Stop()
-	})
-	inputField.SetChangedFunc(func(text string) {
-		makeNewMatch = true
-	})
-
 	textView := cview.NewTextView()
 	textView.SetDynamicColors(true)
 	textView.SetRegions(true)
@@ -111,94 +99,24 @@ func main() {
 		app.Draw()
 	})
 
-	go func() {
-		for {
-			if makeNewMatch {
-				makeNewMatch = false
-				matches := stringWithBestMatch(inputField.GetText(), actionNames)
-				if len(matches) > 0 {
-					service, actions := lookupByFullActionName(matches[0].Target, services)
-					action := mergeActions(actions)
-					if service != nil {
-						resouceTypesString := joinResourceTypeReferences(action.ResourceTypeReferences)
-						conditionKeysString := joinConditionKeys(action.ConditionKeys)
-						message := fmt.Sprintf(
-							`Service: %s
-Action: %s
-Description: %s
-Access Level: %s
-Resource Types: %s
-Condition Keys: %s`,
-							service.Name,
-							fmt.Sprintf("%s:%s", service.Prefix, action.Name),
-							action.Description,
-							action.AccessLevel,
-							resouceTypesString,
-							conditionKeysString,
-						)
-
-						if len(action.ResourceTypeReferences) > 0 {
-							tableString := &strings.Builder{}
-							table := tablewriter.NewWriter(tableString)
-							table.SetHeader([]string{"Resource Type", "ARN", "Condition Keys"})
-							for _, actionResourceTypeName := range action.ResourceTypeReferences {
-								for _, resourceType := range service.ResourceTypes {
-									if actionResourceTypeName.Name == resourceType.Name {
-										table.Append([]string{
-											resourceType.Name,
-											resourceType.ARN,
-											joinConditionKeys(resourceType.ConditionKeys),
-										})
-									}
-								}
-							}
-							if table.NumLines() > 0 {
-								table.Render()
-								message += fmt.Sprintf("\n\nRelevant Resource Types\n%s", tableString)
-							}
-						}
-
-						relevantConditionKeyNames := action.ConditionKeys
-						for _, actionResourceTypeName := range action.ResourceTypeReferences {
-							for _, resourceType := range service.ResourceTypes {
-								if actionResourceTypeName.Name == resourceType.Name {
-									relevantConditionKeyNames = append(relevantConditionKeyNames, resourceType.ConditionKeys...)
-								}
-							}
-						}
-						if len(relevantConditionKeyNames) > 0 {
-							tableString := &strings.Builder{}
-							table := tablewriter.NewWriter(tableString)
-							table.SetHeader([]string{"Condition Key", "Description", "Type"})
-							for _, relevantConditionKeyName := range relevantConditionKeyNames {
-								for _, conditionKey := range service.ConditionKeys {
-									if relevantConditionKeyName == conditionKey.Name {
-										table.Append([]string{
-											conditionKey.Name,
-											conditionKey.Description,
-											conditionKey.Type,
-										})
-									}
-								}
-							}
-							if table.NumLines() > 0 {
-								table.Render()
-								message += fmt.Sprintf("\n\nRelevant Condition Keys\n%s", tableString)
-							}
-						}
-
-						textView.SetText(message)
-						textView.ScrollToBeginning()
-					} else {
-						textView.SetText("No match")
-					}
-				} else {
-					textView.SetText("No match")
-				}
+	inputField := cview.NewInputField()
+	inputField.SetFieldWidth(0)
+	inputField.SetChangedFunc(func(text string) {
+		matches := stringWithBestMatch(text, actionNames)
+		if len(matches) > 0 {
+			service, actions := lookupByFullActionName(matches[0].Target, services)
+			action := mergeActions(actions)
+			if service != nil {
+				message := renderBody(action, service)
+				textView.SetText(message)
+				textView.ScrollToBeginning()
+			} else {
+				textView.SetText("No match")
 			}
-			time.Sleep(10 * time.Millisecond)
+		} else {
+			textView.SetText("No match")
 		}
-	}()
+	})
 
 	flex := cview.NewFlex()
 	flex.SetDirection(cview.FlexRow)
@@ -209,6 +127,84 @@ Condition Keys: %s`,
 	if err := app.Run(); err != nil {
 		panic(err)
 	}
+}
+
+func eachResourceType(service *Service, action *Action, f func(*ResourceType)) {
+	for _, actionResourceTypeName := range action.ResourceTypeReferences {
+		for _, resourceType := range service.ResourceTypes {
+			if actionResourceTypeName.Name == resourceType.Name {
+				f(resourceType)
+			}
+		}
+	}
+}
+
+func eachConditionKey(service *Service, conditionKeyNames []string, f func(*ConditionKey)) {
+	for _, relevantConditionKeyName := range conditionKeyNames {
+		for _, conditionKey := range service.ConditionKeys {
+			if relevantConditionKeyName == conditionKey.Name {
+				f(conditionKey)
+			}
+		}
+	}
+}
+
+func renderBody(action *Action, service *Service) string {
+	resouceTypesString := joinResourceTypeReferences(action.ResourceTypeReferences)
+	conditionKeysString := joinConditionKeys(action.ConditionKeys)
+	message := fmt.Sprintf(
+		`Service: %s
+Action: %s
+Description: %s
+Access Level: %s
+Resource Types: %s
+Condition Keys: %s`,
+		service.Name,
+		fmt.Sprintf("%s:%s", service.Prefix, action.Name),
+		action.Description,
+		action.AccessLevel,
+		resouceTypesString,
+		conditionKeysString,
+	)
+
+	if len(action.ResourceTypeReferences) > 0 {
+		tableString := &strings.Builder{}
+		table := tablewriter.NewWriter(tableString)
+		table.SetHeader([]string{"Resource Type", "ARN", "Condition Keys"})
+		eachResourceType(service, action, func(resourceType *ResourceType) {
+			table.Append([]string{
+				resourceType.Name,
+				resourceType.ARN,
+				joinConditionKeys(resourceType.ConditionKeys),
+			})
+		})
+		if table.NumLines() > 0 {
+			table.Render()
+			message += fmt.Sprintf("\n\nRelevant Resource Types\n%s", tableString)
+		}
+	}
+
+	relevantConditionKeyNames := action.ConditionKeys
+	eachResourceType(service, action, func(resourceType *ResourceType) {
+		relevantConditionKeyNames = append(relevantConditionKeyNames, resourceType.ConditionKeys...)
+	})
+	if len(relevantConditionKeyNames) > 0 {
+		tableString := &strings.Builder{}
+		table := tablewriter.NewWriter(tableString)
+		table.SetHeader([]string{"Condition Key", "Description", "Type"})
+		eachConditionKey(service, relevantConditionKeyNames, func(conditionKey *ConditionKey) {
+			table.Append([]string{
+				conditionKey.Name,
+				conditionKey.Description,
+				conditionKey.Type,
+			})
+		})
+		if table.NumLines() > 0 {
+			table.Render()
+			message += fmt.Sprintf("\n\nRelevant Condition Keys\n%s", tableString)
+		}
+	}
+	return message
 }
 
 func joinResourceTypeReferences(resourceTypeReferences []*ResourceTypeReference) string {
