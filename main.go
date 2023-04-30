@@ -71,6 +71,13 @@ type ServiceCells struct {
 	conditionKeysCells [][]Cell
 }
 
+// TODO color coding. Unique color for service prefix, actions, resource types, condition keys
+// TODO bold titles
+// TODO lines between rows in tables
+// TODO scrolling in the text view
+// TODO input line should be as thin as possible, text view should take up the rest of the vertical space
+// TODO input line should use the full width
+
 func main() {
 	err := maybeCrawl(getRawDataPath())
 	if err != nil {
@@ -110,20 +117,11 @@ func main() {
 				makeNewMatch = false
 				matches := stringWithBestMatch(inputField.GetText(), actionNames)
 				if len(matches) > 0 {
-					service, action := lookupByFullActionName(matches[0].Target, services)
+					service, actions := lookupByFullActionName(matches[0].Target, services)
+					action := mergeActions(actions)
 					if service != nil {
-						resouceTypesString := ""
-						for i, it := range action.ResourceTypeReferences {
-							if it.Required {
-								resouceTypesString += fmt.Sprintf("%s (required)", it.Name)
-							} else {
-								resouceTypesString += it.Name
-							}
-							if i < len(action.ResourceTypeReferences)-1 {
-								resouceTypesString += ", "
-							}
-						}
-
+						resouceTypesString := joinResourceTypeReferences(action.ResourceTypeReferences)
+						conditionKeysString := joinConditionKeys(action.ConditionKeys)
 						message := fmt.Sprintf(
 							`Service: %s
 Action: %s
@@ -136,26 +134,57 @@ Condition Keys: %s`,
 							action.Description,
 							action.AccessLevel,
 							resouceTypesString,
-							action.ConditionKeys,
+							conditionKeysString,
 						)
 
 						if len(action.ResourceTypeReferences) > 0 {
 							tableString := &strings.Builder{}
 							table := tablewriter.NewWriter(tableString)
-							table.SetHeader([]string{"Name", "ARN", "Condition Keys"})
+							table.SetHeader([]string{"Resource Type", "ARN", "Condition Keys"})
 							for _, actionResourceTypeName := range action.ResourceTypeReferences {
 								for _, resourceType := range service.ResourceTypes {
 									if actionResourceTypeName.Name == resourceType.Name {
 										table.Append([]string{
 											resourceType.Name,
 											resourceType.ARN,
-											fmt.Sprintf("%s", resourceType.ConditionKeys),
+											joinConditionKeys(resourceType.ConditionKeys),
 										})
 									}
 								}
 							}
-							table.Render()
-							message += fmt.Sprintf("\n\nRelevant Resource Types\n%s\n", tableString)
+							if table.NumLines() > 0 {
+								table.Render()
+								message += fmt.Sprintf("\n\nRelevant Resource Types\n%s", tableString)
+							}
+						}
+
+						relevantConditionKeyNames := action.ConditionKeys
+						for _, actionResourceTypeName := range action.ResourceTypeReferences {
+							for _, resourceType := range service.ResourceTypes {
+								if actionResourceTypeName.Name == resourceType.Name {
+									relevantConditionKeyNames = append(relevantConditionKeyNames, resourceType.ConditionKeys...)
+								}
+							}
+						}
+						if len(relevantConditionKeyNames) > 0 {
+							tableString := &strings.Builder{}
+							table := tablewriter.NewWriter(tableString)
+							table.SetHeader([]string{"Condition Key", "Description", "Type"})
+							for _, relevantConditionKeyName := range relevantConditionKeyNames {
+								for _, conditionKey := range service.ConditionKeys {
+									if relevantConditionKeyName == conditionKey.Name {
+										table.Append([]string{
+											conditionKey.Name,
+											conditionKey.Description,
+											conditionKey.Type,
+										})
+									}
+								}
+							}
+							if table.NumLines() > 0 {
+								table.Render()
+								message += fmt.Sprintf("\n\nRelevant Condition Keys\n%s", tableString)
+							}
 						}
 
 						textView.SetText(message)
@@ -182,20 +211,72 @@ Condition Keys: %s`,
 	}
 }
 
-func lookupByFullActionName(fullActionName string, services []*Service) (*Service, *Action) {
+func joinResourceTypeReferences(resourceTypeReferences []*ResourceTypeReference) string {
+	resouceTypesString := ""
+	for i, it := range resourceTypeReferences {
+		if it.Required {
+			resouceTypesString += fmt.Sprintf("%s (required)", it.Name)
+		} else {
+			resouceTypesString += it.Name
+		}
+		if i < len(resourceTypeReferences)-1 {
+			resouceTypesString += ", "
+		}
+	}
+	return resouceTypesString
+}
+
+func joinConditionKeys(conditionKeys []string) string {
+	conditionKeysString := ""
+	for i, it := range conditionKeys {
+		conditionKeysString += it
+		if i < len(conditionKeys)-1 {
+			conditionKeysString += ", "
+		}
+	}
+	return conditionKeysString
+}
+
+func lookupByFullActionName(fullActionName string, services []*Service) (*Service, []*Action) {
 	parts := strings.Split(fullActionName, ":")
 	prefix := parts[0]
 	actionName := parts[1]
 	for _, service := range services {
 		if service.Prefix == prefix {
+			actions := make([]*Action, 0)
 			for _, action := range service.Actions {
 				if strings.ToLower(action.Name) == actionName {
-					return service, action
+					actions = append(actions, action)
 				}
 			}
+			return service, actions
 		}
 	}
 	return nil, nil
+}
+
+func mergeActions(actions []*Action) *Action {
+	if len(actions) == 0 {
+		return nil
+	}
+
+	action := &Action{
+		Name:                   actions[0].Name,
+		Description:            actions[0].Description,
+		AccessLevel:            actions[0].AccessLevel,
+		ResourceTypeReferences: make([]*ResourceTypeReference, len(actions[0].ResourceTypeReferences)),
+		ConditionKeys:          make([]string, len(actions[0].ConditionKeys)),
+		DependentActions:       make([]string, len(actions[0].DependentActions)),
+	}
+	copy(action.ResourceTypeReferences, actions[0].ResourceTypeReferences)
+	copy(action.ConditionKeys, actions[0].ConditionKeys)
+	copy(action.DependentActions, actions[0].DependentActions)
+	for i := 1; i < len(actions); i++ {
+		action.ResourceTypeReferences = append(action.ResourceTypeReferences, actions[i].ResourceTypeReferences...)
+		action.ConditionKeys = append(action.ConditionKeys, actions[i].ConditionKeys...)
+		action.DependentActions = append(action.DependentActions, actions[i].DependentActions...)
+	}
+	return action
 }
 
 func buildActionNames(services []*Service) []string {
