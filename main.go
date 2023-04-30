@@ -71,6 +71,7 @@ type ServiceCells struct {
 }
 
 const VERSION_TAG = "v0.1.0"
+const PROJECT_DIR = ".iampolicyhelper"
 const RAW_DATA_PATH = "rawData.json"
 const VERSION_PATH = "version.txt"
 
@@ -764,5 +765,5 @@ func getProjectDir() string {
 	if err != nil {
 		panic(err)
 	}
-	return path.Join(homedir, ".iampolicyhelper")
+	return path.Join(homedir, PROJECT_DIR)
 }
