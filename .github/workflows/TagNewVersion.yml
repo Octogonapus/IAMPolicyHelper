@@ -1,0 +1,40 @@
+name: TagNewVersion
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "main.go"
+
+jobs:
+  TagNewVersion:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Parse this tag
+        id: parse-tag
+        run: |
+          THIS_TAG=$(grep 'const VERSION_TAG' 'main.go' | awk '{ split($0,a,"="); print a[2] }') | xargs
+          echo "tag=$(echo $THIS_TAG)" >> $GITHUB_OUTPUT
+
+      - name: Continue if there is a new version
+        run: |
+          ! git rev-parse $THIS_TAG >/dev/null 2>&1
+        env:
+          THIS_TAG: ${{ steps.parse-tag.outputs.tag }}
+
+      - name: Tag new version
+        run: git tag -s -m "$THIS_TAG" $THIS_TAG
+        env:
+          THIS_TAG: ${{ steps.parse-tag.outputs.tag }}
+
+      - name: Push new tag
+        run: git push --tags
