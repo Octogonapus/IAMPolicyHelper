@@ -74,7 +74,6 @@ type ServiceCells struct {
 // TODO color coding. Unique color for service prefix, actions, resource types, condition keys
 // TODO bold titles
 // TODO lines between rows in tables
-// TODO scrolling in the text view
 
 func main() {
 	// FIXME re-crawl if the application version changed
@@ -91,6 +90,7 @@ func main() {
 	actionNames := buildActionNames(services)
 
 	app := cview.NewApplication()
+	app.EnableMouse(true)
 
 	makeNewMatch := true
 	inputField := cview.NewInputField()
@@ -106,6 +106,7 @@ func main() {
 	textView.SetDynamicColors(true)
 	textView.SetRegions(true)
 	textView.SetMaxLines(0)
+	textView.SetScrollBarVisibility(cview.ScrollBarAuto)
 	textView.SetChangedFunc(func() {
 		app.Draw()
 	})
@@ -198,13 +199,6 @@ Condition Keys: %s`,
 			time.Sleep(10 * time.Millisecond)
 		}
 	}()
-
-	// grid := cview.NewGrid()
-	// grid.SetRows(2)
-	// grid.SetColumns(1)
-	// grid.SetBorders(true)
-	// grid.AddItem(inputField, 1, 1, 1, 1, 0, 0, true)
-	// grid.AddItem(textView, 2, 1, 4, 1, 0, 0, false)
 
 	flex := cview.NewFlex()
 	flex.SetDirection(cview.FlexRow)
