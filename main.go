@@ -194,6 +194,7 @@ func renderBody(action *Action, service *Service) string {
 		table.SetHeader([]string{"Condition Key", "Description", "Type"})
 		table.SetRowLine(true)
 		table.SetRowSeparator("-")
+		table.SetColWidth(100)
 		eachConditionKey(service, relevantConditionKeyNames, func(conditionKey *ConditionKey) {
 			table.Append([]string{
 				conditionKey.Name,
@@ -497,7 +498,7 @@ func crawlTableRows(h *colly.HTMLElement) []Cell {
 func cleanupHTMLStringList(ss []string) []string {
 	out := make([]string, 0)
 	for _, s := range ss {
-		s = strings.Trim(s, " \n\t")
+		s = removeSpace(s)
 		if len(s) > 0 {
 			out = append(out, s)
 		}
