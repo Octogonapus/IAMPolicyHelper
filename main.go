@@ -70,7 +70,6 @@ type ServiceCells struct {
 }
 
 // TODO color coding. Unique color for service prefix, actions, resource types, condition keys
-// TODO bold titles
 
 func main() {
 	// FIXME re-crawl if the application version changed
@@ -152,12 +151,12 @@ func renderBody(action *Action, service *Service) string {
 	resouceTypesString := joinResourceTypeReferences(action.ResourceTypeReferences)
 	conditionKeysString := joinConditionKeys(action.ConditionKeys)
 	message := fmt.Sprintf(
-		`Service: %s
-Action: %s
-Description: %s
-Access Level: %s
-Resource Types: %s
-Condition Keys: %s`,
+		`[::b]Service:[::-] %s
+[::b]Action[::-]: %s
+[::b]Description[::-]: %s
+[::b]Access Level[::-]: %s
+[::b]Resource Types[::-]: %s
+[::b]Condition Keys[::-]: %s`,
 		service.Name,
 		fmt.Sprintf("%s:%s", service.Prefix, action.Name),
 		action.Description,
@@ -181,7 +180,7 @@ Condition Keys: %s`,
 		})
 		if table.NumLines() > 0 {
 			table.Render()
-			message += fmt.Sprintf("\n\nRelevant Resource Types\n%s", tableString)
+			message += fmt.Sprintf("\n\n[::b]Relevant Resource Types[::-]\n%s", tableString)
 		}
 	}
 
@@ -204,7 +203,7 @@ Condition Keys: %s`,
 		})
 		if table.NumLines() > 0 {
 			table.Render()
-			message += fmt.Sprintf("\n\nRelevant Condition Keys\n%s", tableString)
+			message += fmt.Sprintf("\n\n[::b]Relevant Condition Keys[::-]\n%s", tableString)
 		}
 	}
 	return message
