@@ -36,7 +36,7 @@ type Action struct {
 	DependentActions       []string
 }
 
-type Resource struct {
+type ResourceType struct {
 	Name          string
 	ARN           string
 	ConditionKeys []string
@@ -53,7 +53,7 @@ type Service struct {
 	Name          string
 	Prefix        string
 	Actions       []*Action
-	Resources     []*Resource
+	ResourceTypes []*ResourceType
 	ConditionKeys []*ConditionKey
 }
 
@@ -144,7 +144,7 @@ Condition Keys: %s`,
 							table := tablewriter.NewWriter(tableString)
 							table.SetHeader([]string{"Name", "ARN", "Condition Keys"})
 							for _, actionResourceTypeName := range action.ResourceTypeReferences {
-								for _, resourceType := range service.Resources {
+								for _, resourceType := range service.ResourceTypes {
 									if actionResourceTypeName.Name == resourceType.Name {
 										table.Append([]string{
 											resourceType.Name,
@@ -370,7 +370,7 @@ func crawl() ([]*Service, error) {
 			Name:          serviceCells.name,
 			Prefix:        serviceCells.prefix,
 			Actions:       actions,
-			Resources:     resources,
+			ResourceTypes: resources,
 			ConditionKeys: conditionKeys,
 		}
 		services = append(services, service)
@@ -456,10 +456,10 @@ func actionsFromTable(table [][]string) []*Action {
 	return actions
 }
 
-func resourcesFromTable(table [][]string) []*Resource {
-	resources := make([]*Resource, len(table))
+func resourcesFromTable(table [][]string) []*ResourceType {
+	resources := make([]*ResourceType, len(table))
 	for rowI, row := range table {
-		resource := &Resource{
+		resource := &ResourceType{
 			Name:          strings.Trim(row[0], " \n\t"),
 			ARN:           strings.Trim(row[1], " \n\t"),
 			ConditionKeys: cleanupHTMLStringList(strings.Split(row[2], "\n")),
