@@ -76,9 +76,9 @@ type ServiceCells struct {
 // TODO lines between rows in tables
 // TODO scrolling in the text view
 // TODO input line should be as thin as possible, text view should take up the rest of the vertical space
-// TODO input line should use the full width
 
 func main() {
+	// FIXME re-crawl if the application version changed
 	err := maybeCrawl(getRawDataPath())
 	if err != nil {
 		panic(err)
@@ -95,7 +95,7 @@ func main() {
 
 	makeNewMatch := true
 	inputField := tview.NewInputField().
-		SetFieldWidth(100).
+		SetFieldWidth(0).
 		SetDoneFunc(func(key tcell.Key) {
 			app.Stop()
 		})
