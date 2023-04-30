@@ -71,7 +71,6 @@ type ServiceCells struct {
 
 // TODO color coding. Unique color for service prefix, actions, resource types, condition keys
 // TODO bold titles
-// TODO lines between rows in tables
 
 func main() {
 	// FIXME re-crawl if the application version changed
@@ -171,6 +170,8 @@ Condition Keys: %s`,
 		tableString := &strings.Builder{}
 		table := tablewriter.NewWriter(tableString)
 		table.SetHeader([]string{"Resource Type", "ARN", "Condition Keys"})
+		table.SetRowLine(true)
+		table.SetRowSeparator("-")
 		eachResourceType(service, action, func(resourceType *ResourceType) {
 			table.Append([]string{
 				resourceType.Name,
@@ -192,6 +193,8 @@ Condition Keys: %s`,
 		tableString := &strings.Builder{}
 		table := tablewriter.NewWriter(tableString)
 		table.SetHeader([]string{"Condition Key", "Description", "Type"})
+		table.SetRowLine(true)
+		table.SetRowSeparator("-")
 		eachConditionKey(service, relevantConditionKeyNames, func(conditionKey *ConditionKey) {
 			table.Append([]string{
 				conditionKey.Name,
