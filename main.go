@@ -150,9 +150,21 @@ func eachConditionKey(service *Service, conditionKeyNames []string, f func(*Cond
 	}
 }
 
+func unique(array []string) []string {
+	occurred := map[string]bool{}
+	out := []string{}
+	for _, it := range array {
+		if !occurred[it] {
+			occurred[it] = true
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
 func renderBody(action *Action, service *Service) string {
 	resouceTypesString := joinResourceTypeReferences(action.ResourceTypeReferences)
-	conditionKeysString := joinConditionKeys(action.ConditionKeys)
+	conditionKeysString := joinConditionKeys(unique(action.ConditionKeys))
 	message := fmt.Sprintf(
 		`[::b]Service:[::-] %s
 [::b]Action[::-]: %s
@@ -174,10 +186,11 @@ func renderBody(action *Action, service *Service) string {
 		table.SetHeader([]string{"Resource Type", "ARN", "Condition Keys"})
 		table.SetRowLine(true)
 		table.SetRowSeparator("-")
+		table.SetColWidth(100)
 		eachResourceType(service, action, func(resourceType *ResourceType) {
 			table.Append([]string{
 				resourceType.Name,
-				resourceType.ARN,
+				breakString(resourceType.ARN, 80),
 				joinConditionKeys(resourceType.ConditionKeys),
 			})
 		})
@@ -191,6 +204,7 @@ func renderBody(action *Action, service *Service) string {
 	eachResourceType(service, action, func(resourceType *ResourceType) {
 		relevantConditionKeyNames = append(relevantConditionKeyNames, resourceType.ConditionKeys...)
 	})
+	relevantConditionKeyNames = unique(relevantConditionKeyNames)
 	if len(relevantConditionKeyNames) > 0 {
 		tableString := &strings.Builder{}
 		table := tablewriter.NewWriter(tableString)
@@ -258,6 +272,35 @@ func joinConditionKeys(conditionKeys []string) string {
 		}
 	}
 	return conditionKeysString
+}
+
+func breakString(s string, lim int) string {
+	if len(s) > lim {
+		lines := []string{}
+		prev := 0
+		next := 0
+		for {
+			next += lim
+			if next >= len(s) {
+				next = len(s) - 1
+			}
+
+			line := s[prev:next]
+			lines = append(lines, line)
+			prev = next
+			if next == len(s)-1 {
+				break
+			}
+		}
+
+		out := ""
+		for _, line := range lines {
+			out += fmt.Sprintf("%s\n", line)
+		}
+		return out
+	} else {
+		return s
+	}
 }
 
 func lookupByFullActionName(fullActionName string, services []*Service) (*Service, []*Action) {
