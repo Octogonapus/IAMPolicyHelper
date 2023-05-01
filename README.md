@@ -1,6 +1,6 @@
 # IAMPolicyHelper: :zap: :mag: Lightning fast interactive search to help you write IAM policies
 
-[](./demo.svg)
+![](./demo.svg)
 
 ## Install
 
