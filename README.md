@@ -4,8 +4,17 @@
 
 ## Install
 
+### Binary Installation
+
+Download an appropriate binary from the [latest release](https://github.com/Octogonapus/IAMPolicyHelper/releases/latest).
+
+### Manual Installation
+
 ```sh
-go install github.com/Octogonapus/IAMPolicyHelper
+git clone https://github.com/Octogonapus/IAMPolicyHelper
+cd IAMPolicyHelper
+go build
+go install
 ```
 
 ## How does it work?
