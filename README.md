@@ -1,6 +1,4 @@
-# IAMPolicyHelper
-
-## :zap: :mag: Lightning fast interactive search to help you write IAM policies
+# IAMPolicyHelper: :zap: :mag: Lightning fast interactive search to help you write IAM policies
 
 [![asciicast](https://asciinema.org/a/qoNQtM2yuEyZX1c2vOv8prdfA.svg)](https://asciinema.org/a/qoNQtM2yuEyZX1c2vOv8prdfA)
 
