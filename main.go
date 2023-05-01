@@ -485,12 +485,6 @@ func crawl() ([]*Service, error) {
 	serviceDataMutex := sync.Mutex{}
 	serviceData := make(map[string]*ServiceCells)
 
-	getServiceCells := func(url string) *ServiceCells {
-		serviceDataMutex.Lock()
-		defer serviceDataMutex.Unlock()
-		return serviceData[url]
-	}
-
 	c.OnRequest(func(r *colly.Request) {
 		url := r.AbsoluteURL(r.URL.String())
 		serviceDataMutex.Lock()
@@ -506,7 +500,9 @@ func crawl() ([]*Service, error) {
 	c.OnHTML("#main-content p", func(h *colly.HTMLElement) {
 		if strings.Contains(h.Text, "service prefix") {
 			url := h.Request.AbsoluteURL(h.Request.URL.String())
-			serviceCells := getServiceCells(url)
+			serviceDataMutex.Lock()
+			defer serviceDataMutex.Unlock()
+			serviceCells := serviceData[url]
 			serviceCells.Name = strings.Trim(strings.Split(h.Text, "(")[0], " ")
 			serviceCells.Prefix = h.ChildText("code")
 		}
@@ -514,7 +510,9 @@ func crawl() ([]*Service, error) {
 
 	c.OnHTML(".table-container", func(e *colly.HTMLElement) {
 		url := e.Request.AbsoluteURL(e.Request.URL.String())
-		serviceCells := getServiceCells(url)
+		serviceDataMutex.Lock()
+		defer serviceDataMutex.Unlock()
+		serviceCells := serviceData[url]
 		headerText := strings.ToLower(e.ChildText("table tr th"))
 		if strings.HasPrefix(headerText, "actions") {
 			e.ForEach("table tbody tr", func(i int, h *colly.HTMLElement) {
