@@ -70,7 +70,7 @@ type ServiceCells struct {
 	ConditionKeysCells [][]Cell
 }
 
-const VERSION_TAG = "v0.1.0"
+const VERSION_TAG = "v0.1.1"
 const PROJECT_DIR = ".iampolicyhelper"
 const RAW_DATA_PATH = "rawData.json"
 const VERSION_PATH = "version.txt"
