@@ -17,6 +17,11 @@ go build
 go install
 ```
 
+## AWS IAM Policy Updates
+
+AWS sometimes updates IAM by introducing new actions/resources/etc. or by changing existing ones.
+When this happens, you should remove the local copy of the IAM policies located at `~/.iampolicyhelper/rawData.json`.
+
 ## How does it work?
 
 The latest IAM documentation is scraped from the AWS website and saved locally the first time you run the program.
