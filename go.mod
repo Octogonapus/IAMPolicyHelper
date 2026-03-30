@@ -7,12 +7,13 @@ toolchain go1.23.4
 require (
 	code.rocketnine.space/tslocum/cview v1.5.9
 	github.com/PuerkitoBio/goquery v1.10.0
-	github.com/gdamore/tcell/v2 v2.7.4
 	github.com/gocolly/colly v1.2.0
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/stretchr/testify v1.8.4
 )
+
+replace code.rocketnine.space/tslocum/cview => codeberg.org/tslocum/cview v1.5.9
 
 require (
 	code.rocketnine.space/tslocum/cbind v0.1.5 // indirect
@@ -22,6 +23,7 @@ require (
 	github.com/antchfx/xpath v1.3.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gdamore/encoding v1.0.1 // indirect
+	github.com/gdamore/tcell/v2 v2.7.4 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
